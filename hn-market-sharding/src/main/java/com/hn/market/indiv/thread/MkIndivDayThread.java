@@ -25,90 +25,29 @@ import java.util.concurrent.Future;
 public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> {
 
     @Async("myAsync")
-    public Future<Map<String, List>> getScodeSdate(List<MkIndivDay> list){
+    public Future<Map<String, List>> getScodeSdate(List<MkIndivDay> list) {
 
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            System.out.println("Stcok自带的线程池开始" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
-            //查看股票数据的日期；
-            Map<String, List> map = new HashMap<>();
-            Map<Integer, List<String>> map0 = new HashMap<>();
-            Map<Integer, List<String>> map1 = new HashMap<>();
-            QueryWrapper<MkIndivDay> wrapper = new QueryWrapper<>();
-            LambdaQueryWrapper<MkIndivDay> lambda = wrapper.lambda();
-            for (MkIndivDay mk : list) {
-                int code = Integer.valueOf(mk.getScode());
-                int key = code % 20;
-                if (0==(mk.getSmarket())) {
-                    if (map0.containsKey(key)) {
-                        List<String> codes = map0.get(key);
-                        codes.add(mk.getScode());
-                    } else {
-                        List codes = new ArrayList<>();
-                        codes.add(mk.getScode());
-                        map0.put(key, codes);
-                    }
-                }
-                if (1==(mk.getSmarket())) {
-                    if (map1.containsKey(key)) {
-                        List<String> codes = map1.get(key);
-                        codes.add(mk.getScode());
-                    } else {
-                        List codes = new ArrayList<>();
-                        codes.add(mk.getScode());
-                        map1.put(key, codes);
-                    }
-                }
-            }
-
-            for (Integer key: map0.keySet()) {
-                List<String> codes = map0.get(key);
-                lambda.clear();
-                lambda.select(MkIndivDay::getScode, MkIndivDay::getSdate);
-                lambda.eq(MkIndivDay::getSmarket, 0);
-                lambda.in(MkIndivDay::getScode, codes);
-                List<MkIndivDay> datelist = list(lambda);
-                List dates = new ArrayList<String>();
-                String oldkey = "";
-                for (MkIndivDay data : datelist) {
-                    if (oldkey.equals(data.getScode())) {
-                        dates.add(data.getSdate());
-                    } else {
-                        map.put("0" + "." + oldkey, dates);
-                        dates = new ArrayList<String>();
-                        dates.add(data.getSdate());
-                        oldkey = data.getScode();
-                    }
-
-                }
-                if (null != dates && dates.size() > 0) {
-                    map.put("0" + "." + oldkey, dates);
-                }
-            }
-        for (Integer key: map1.keySet()) {
-            List<String> codes = map1.get(key);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        System.out.println("Stcok自带的线程池开始" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
+        //查看股票数据的日期；
+        Map<String, List> map = new HashMap<>();
+        QueryWrapper<MkIndivDay> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<MkIndivDay> lambda = wrapper.lambda();
+        for (MkIndivDay mk : list) {
+            String key = mk.getSmarket() + "." + mk.getScode();
             lambda.clear();
-            lambda.select(MkIndivDay::getScode, MkIndivDay::getSdate);
-            lambda.eq(MkIndivDay::getSmarket, 1);
-            lambda.in(MkIndivDay::getScode, codes);
+            lambda.select(MkIndivDay::getSdate);
+            lambda.eq(MkIndivDay::getSmarket, mk.getSmarket());
+            lambda.eq(MkIndivDay::getScode, mk.getScode());
             List<MkIndivDay> datelist = list(lambda);
             List dates = new ArrayList<String>();
-            String oldkey = "";
-            for (MkIndivDay data : datelist) {
-                if (oldkey.equals(data.getScode())) {
-                    dates.add(data.getSdate());
-                } else {
-                    map.put("0" + "." + oldkey, dates);
-                    dates = new ArrayList<String>();
-                    dates.add(data.getSdate());
-                    oldkey = data.getScode();
-                }
+            for (MkIndivDay date : datelist) {
+                dates.add(date.getSdate());
             }
-            if (null != dates && dates.size() > 0) {
-                map.put("0" + "." + oldkey, dates);
-            }
+            map.put(key, dates);
         }
-            System.out.println("Stcok自带的线程池结束" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
-            return new AsyncResult<>(map);
+        System.out.println("Stcok自带的线程池结束" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
+        return new AsyncResult<>(map);
     }
 
     @Async("myAsync")
@@ -141,8 +80,8 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
                 //量比
                 mkIndivDay.setVolratio(stock.getBigDecimal("f10", BigDecimal.ZERO).divide(BigDecimal.valueOf(100)));
                 //分表代码
-                String scode=stock.getStr("f12", null);
-                mkIndivDay.setScodeNum(null == scode? 0: Integer.valueOf(scode));
+                String scode = stock.getStr("f12", null);
+                mkIndivDay.setScodeNum(null == scode ? 0 : Integer.valueOf(scode));
                 //代码
                 mkIndivDay.setScode(scode);
                 //市场
@@ -179,28 +118,28 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
     }
 
 
-
     /**
      * 日期	收盘	涨跌幅(%)	涨跌额	成交量(手)	成交额	振幅%	换手率%	市盈率(动态)	量比	代码	市场	名称	最高	最低	开盘	昨收	总市值	流通市值	市净	今日主力净流入	TTM市盈率(动态)
-     * 	CLOSE	DIFFERRANGE	DIFFER	VOLUME	AMOUNT	AMPLITUDE	TURN	PE	VOLRATIO	SCODE	SCLASS	SNAME	HIGH	LOW	OPEN	PRECLOSE	MV	LIQMV	PB	NETINFLOW	PETTM
+     * CLOSE	DIFFERRANGE	DIFFER	VOLUME	AMOUNT	AMPLITUDE	TURN	PE	VOLRATIO	SCODE	SCLASS	SNAME	HIGH	LOW	OPEN	PRECLOSE	MV	LIQMV	PB	NETINFLOW	PETTM
      * klines：	klines：	klines：	klines：	klines：	klines：	klines：	klines：			code	market	name	klines：	klines：	klines：
      * 0	2	8	9	5	6	7	10						3	4	1
      * 解析爬取到的个股信息K线图 --东方财富网
+     *
      * @param content
      */
     @Async("myAsync")
-    public Future<List<MkIndivDay>> analysisPast(String content, List dates) {
+    public void analysisPast(String content, List dates) {
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         System.out.println("Stcok自带的线程池开始" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
 
-        if (content == null) return null;
+        if (content == null) return ;
 
         List list = new ArrayList<MkIndivDay>();
 
         JSONObject jsonObject = JSONUtil.parseObj(content);
         JSONObject data = jsonObject.getJSONObject("data");
-        if (null == data) return null;
+        if (null == data) return ;
         //代码
         String scode = data.getStr("code");
         //市场
@@ -218,7 +157,7 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
             //已经存在日期，不保存
             if (dates.contains(sdate)) continue;
 
-           MkIndivDay mkIndivDay = new MkIndivDay();
+            MkIndivDay mkIndivDay = new MkIndivDay();
 
             mkIndivDay.setSdate(sdate);
             //收盘
@@ -252,8 +191,8 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
 
             list.add(mkIndivDay);
         }
+        saveBatch(list);
         System.out.println("Stcok自带的线程池结束" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
-        return new AsyncResult<>(list);
     }
 
 

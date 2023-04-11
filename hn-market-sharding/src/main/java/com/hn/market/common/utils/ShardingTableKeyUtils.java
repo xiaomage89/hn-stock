@@ -17,14 +17,22 @@ public class ShardingTableKeyUtils implements PreciseShardingAlgorithm<String> {
     @Override
     public String doSharding(Collection<String> collection, PreciseShardingValue<String> preciseShardingValue) {
         String id = preciseShardingValue.getValue();
-        String tableNo = null;
+        int tableNo = 0;
+        int num=0;
         if (StrUtil.isNotEmpty(id)){
-            tableNo = String.valueOf(Integer.valueOf(id) % 20);
+            tableNo = Integer.valueOf(id) % 20;
         }else{
             return null;
         }
         for (String tableName : collection) {//循环表名已确定使用哪张表
-            if(tableName.contains(tableNo)){
+            int len=tableName.length();
+            if(48<=tableName.charAt(len-2) && tableName.charAt(len-2) <=57){
+               num = Integer.valueOf(tableName.substring(len-2));
+            }else{
+                num = Integer.valueOf(tableName.substring(len-1));
+            }
+
+            if(num==tableNo){
                 return tableName;//返回要插入的逻辑表
             }
         }

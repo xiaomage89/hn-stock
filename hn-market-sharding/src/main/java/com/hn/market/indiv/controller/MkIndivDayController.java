@@ -75,7 +75,7 @@ public class MkIndivDayController {
     @ResponseBody
     public CommonResult delete(@RequestParam(value = "scode", required = false) String scode,
                                @RequestParam(value = "sname", required = false) String sname,
-                               @RequestParam(value = "sdate", required = false) String sdate) {
+                               @RequestParam(value = "sdate", required = true) String sdate) {
         boolean success = mkIndivDayService.delete(scode, sname,sdate);
         if (success) {
             return CommonResult.success(null);

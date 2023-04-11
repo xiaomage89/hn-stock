@@ -15,6 +15,7 @@ import com.hn.market.mbg.mapper.MkIndivDayMapper;
 import com.hn.market.mbg.model.MkIndivDay;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -61,7 +62,7 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
      * @return 涨跌幅，市场，代码 降序排列
      */
     @Override
-    public List<MkIndivDay> list(String smarket, String scode,String sname,String sdate, Integer pageSize, Integer pageNum) {
+    public List<MkIndivDay> list(String smarket, String scode, String sname, String sdate, Integer pageSize, Integer pageNum) {
 
         //返回数据
         Page<MkIndivDay> page = new Page<>(pageNum, pageSize);
@@ -69,9 +70,9 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
         LambdaQueryWrapper<MkIndivDay> lambda = wrapper.lambda();
         //判断是否已经爬取,根据最新日期
         String ndate = myDateUtils.getWorkDate();
-        if(StrUtil.isNotEmpty(sdate) && !sdate.equals(ndate) ) {
+        if (StrUtil.isNotEmpty(sdate) && !sdate.equals(ndate)) {
             lambda.eq(MkIndivDay::getSdate, sdate);
-        }else{
+        } else {
             lambda.eq(MkIndivDay::getSdate, ndate);
             baseMapper.delete(lambda);
             //爬取数据
@@ -81,13 +82,13 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
             saveBatch(list);
         }
 
-        if(StrUtil.isNotEmpty(smarket)){
+        if (StrUtil.isNotEmpty(smarket)) {
             lambda.eq(MkIndivDay::getSmarket, smarket);
         }
-        if(StrUtil.isNotEmpty(scode)){
+        if (StrUtil.isNotEmpty(scode)) {
             lambda.eq(MkIndivDay::getScode, scode);
         }
-        if(StrUtil.isNotEmpty(sname)){
+        if (StrUtil.isNotEmpty(sname)) {
             lambda.like(MkIndivDay::getSname, sname);
         }
 
@@ -106,7 +107,7 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
      * @return 代码 日期
      */
     @Override
-    public List<MkIndivDay> listPast(String scode, String sname, Integer pageSize, Integer pageNum){
+    public List<MkIndivDay> listPast(String scode, String sname, Integer pageSize, Integer pageNum) {
         //返回数据
         Page<MkIndivDay> page = new Page<>(pageNum, pageSize);
         //爬虫路径
@@ -152,58 +153,35 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
             futures.add(future);
         }
 
-        for (Future<Map<String, List>> future :futures){
-                    try {
-                        map.putAll(future.get());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
-            }
-        System.out.println("fun1==========>"+((Calendar.getInstance().getTimeInMillis()-start)/1000));
-
-        start = Calendar.getInstance().getTimeInMillis();
-        futures = new ArrayList<>();
-        List list = new ArrayList<>();
-        int i = 0;
-        for (String key : map.keySet()) {
-            String urlPath = url + key;
-            String content = webCrawlerUtils.getCrawler(urlPath);
-            // 解析Json
-            Future<List<MkIndivDay>> listFuture = mkIndivDayThread.analysisPast(content, map.get(key));
-            futures.add(listFuture);
-            i++;
-            if (i==10){
-                for (Future<List<MkIndivDay>> future: futures){
-                    try {
-                        List<MkIndivDay> mkIndivDays = future.get();
-                        list.addAll(mkIndivDays);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                }
-                futures.clear();
-                saveBatch(list);
-                i=0;
-            }
-        }
-        for (Future<List<MkIndivDay>> future: futures){
+        for (Future<Map<String, List>> future : futures) {
             try {
-                List<MkIndivDay> mkIndivDays = future.get();
-                list.addAll(mkIndivDays);
+                map.putAll(future.get());
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (ExecutionException e) {
                 e.printStackTrace();
             }
         }
-        futures.clear();
-        saveBatch(list);
+        System.out.println("fun1==========>" + ((Calendar.getInstance().getTimeInMillis() - start) / 1000));
 
-        System.out.println("fun2==========>"+((Calendar.getInstance().getTimeInMillis()-start)/1000));
+        start = Calendar.getInstance().getTimeInMillis();
+        int i = 0;
+        for (String key : map.keySet()) {
+            String urlPath = url + key;
+            String content = webCrawlerUtils.getCrawler(urlPath);
+            // 解析Json
+            mkIndivDayThread.analysisPast(content, map.get(key));
+            try {
+                i++;
+                if(i%10==0) {
+                    Thread.sleep(1000);
+                    System.out.println("已处理条数"+i);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("fun2==========>" + ((Calendar.getInstance().getTimeInMillis() - start) / 1000));
         lambda.clear();
         lambda.last(" limit 5 ");
         return list(lambda);
@@ -230,9 +208,9 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
     }
 
     /**
-     json：	f1:2,	f2:34.86,	f3:20.0,	f4:5.81,	f5:76938,	f6:257140310.76,	f7:11.74,	f8:19.71,	f9:36.51,	f10:3.83,	f11:0.0,	f12:"300926",	f13:0,	f14:"博俊科技",	f15:34.86,	f16:31.45,	f17:31.61,	f18:29.05,	f20:5399998758,	f21:1360704324,	f22:0.0,	f23:4.24,	f24:66.87,	f25:67.35,	f62:32428363.0,	f115:36.51,	f128:"-",	f140:"-",	f141:"-",	f136:"-",	f152:2
-     数据库：		收盘	涨跌幅(%)	涨跌额	成交量(手)	成交额	振幅%	换手率%	市盈率(动态)	量比		代码	市场	名称	最高	最低	开盘	昨收	总市值	流通市值		市净			今日主力净流入	TTM市盈率(动态)
-     CLOSE	DIFFERRANGE	DIFFER	VOLUME	AMOUNT	AMPLITUDE	TURN	PE	VOLRATIO		SCODE	SCLASS	SNAME	HIGH	LOW	OPEN	PRECLOSE	MV	LIQMV		PB			NETINFLOW	PETTM
+     * json：	f1:2,	f2:34.86,	f3:20.0,	f4:5.81,	f5:76938,	f6:257140310.76,	f7:11.74,	f8:19.71,	f9:36.51,	f10:3.83,	f11:0.0,	f12:"300926",	f13:0,	f14:"博俊科技",	f15:34.86,	f16:31.45,	f17:31.61,	f18:29.05,	f20:5399998758,	f21:1360704324,	f22:0.0,	f23:4.24,	f24:66.87,	f25:67.35,	f62:32428363.0,	f115:36.51,	f128:"-",	f140:"-",	f141:"-",	f136:"-",	f152:2
+     * 数据库：		收盘	涨跌幅(%)	涨跌额	成交量(手)	成交额	振幅%	换手率%	市盈率(动态)	量比		代码	市场	名称	最高	最低	开盘	昨收	总市值	流通市值		市净			今日主力净流入	TTM市盈率(动态)
+     * CLOSE	DIFFERRANGE	DIFFER	VOLUME	AMOUNT	AMPLITUDE	TURN	PE	VOLRATIO		SCODE	SCLASS	SNAME	HIGH	LOW	OPEN	PRECLOSE	MV	LIQMV		PB			NETINFLOW	PETTM
      * 解析爬取到的个股信息 --东方财富网
      *
      * @param content
