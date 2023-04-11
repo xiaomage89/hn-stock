@@ -34,4 +34,13 @@ public class MyDateUtils {
         return sdate;
     }
 
+    /**
+     * 获取当前年月日（yyyyMMdd）
+     * @return
+     */
+    public String getNewDate(){
+        Calendar cal = Calendar.getInstance();
+        return sdf.format(cal.getTime());
+    }
+
 }

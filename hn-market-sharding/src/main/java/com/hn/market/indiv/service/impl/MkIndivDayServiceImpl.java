@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hn.market.common.utils.FileIOUtils;
 import com.hn.market.common.utils.MyDateUtils;
 import com.hn.market.common.utils.WebCrawlerUtils;
 import com.hn.market.indiv.service.MkIndivDayService;
@@ -15,14 +16,12 @@ import com.hn.market.mbg.mapper.MkIndivDayMapper;
 import com.hn.market.mbg.model.MkIndivDay;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.Struct;
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -43,6 +42,11 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
     private String DF_MARKET_INDIV_PAST;
     @Value("${df.sclass.scode}")
     private String DF_SCLASS_SCODE;
+    @Value("${df.market.indiv.details.path}")
+    private String DF_MARKET_INDIV_DETAILS_PATH;
+    @Value("${df.market.indiv.details.url}")
+    private String DF_MARKET_INDIV_DETAILS_URL;
+
 
     @Autowired
     private WebCrawlerUtils webCrawlerUtils;
@@ -52,6 +56,9 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
 
     @Autowired
     private MkIndivDayThread mkIndivDayThread;
+
+    @Autowired
+    private FileIOUtils fileIOUtils;
 
     /**
      * 查询最新个股行情（包含沪深京A股） ，如果数据库没有数据，网盘爬取
@@ -205,6 +212,38 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean createDetails(String scode, String sname, String ndays) {
+        QueryWrapper<MkIndivDay> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<MkIndivDay> lambda = wrapper.lambda();
+        lambda.select(MkIndivDay::getSmarket,MkIndivDay::getScode);
+        if (StrUtil.isNotEmpty(scode)) {
+            lambda.eq(MkIndivDay::getScode, scode);
+        }
+        if (StrUtil.isNotEmpty(sname)) {
+            lambda.like(MkIndivDay::getSname, sname);
+        }
+        //根据最新日期
+        String ndate = myDateUtils.getWorkDate();
+        lambda.like(MkIndivDay::getSdate, ndate);
+        List<MkIndivDay> list = list(lambda);
+        String url = DF_MARKET_INDIV_DETAILS_URL+ndays+DF_SCLASS_SCODE;
+        String filePath = DF_MARKET_INDIV_DETAILS_PATH+myDateUtils.getNewDate().substring(0,6);
+        for (MkIndivDay mk:list){
+            String secid = mk.getSmarket()+"."+mk.getScode();
+            String httpUrl = url +secid;
+            String content = webCrawlerUtils.getCrawler(httpUrl);
+            try {
+                String  newfilepath = fileIOUtils.creatTxtFile(filePath, mk.getScode());
+                mkIndivDayThread.analysisDetails(content,newfilepath);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+        return true;
     }
 
     /**

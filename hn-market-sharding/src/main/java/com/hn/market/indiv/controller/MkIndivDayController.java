@@ -9,6 +9,7 @@ import com.hn.market.mbg.model.MkIndivDay;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -77,6 +78,27 @@ public class MkIndivDayController {
                                @RequestParam(value = "sname", required = false) String sname,
                                @RequestParam(value = "sdate", required = true) String sdate) {
         boolean success = mkIndivDayService.delete(scode, sname,sdate);
+        if (success) {
+            return CommonResult.success(null);
+        } else {
+            return CommonResult.failed();
+        }
+    }
+
+    /**
+     *
+     * @param scode
+     * @param sname
+     * @param ndays   几天的分时图数据，最大值5天
+     * @return
+     */
+    @ApiOperation("爬取分时图信息")
+    @RequestMapping(value = "/details", method = RequestMethod.GET)
+    @ResponseBody
+    public CommonResult createDetails(@RequestParam(value = "scode", required = false) String scode,
+                               @RequestParam(value = "sname", required = false) String sname,
+                               @RequestParam(value = "ndays", required = true,defaultValue = "1") String ndays) {
+        boolean success = mkIndivDayService.createDetails(scode, sname,ndays);
         if (success) {
             return CommonResult.success(null);
         } else {

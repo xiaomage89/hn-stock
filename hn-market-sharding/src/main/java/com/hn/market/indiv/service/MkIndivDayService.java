@@ -36,4 +36,6 @@ public interface MkIndivDayService extends IService<MkIndivDay> {
     List<MkIndivDay>  listPast(String scode,String sname,Integer pageSize, Integer pageNum) throws ExecutionException, InterruptedException;
 
     boolean delete(String scode, String sname ,String sdate);
+
+    boolean createDetails(String scode, String sname,String ndays);
 }
