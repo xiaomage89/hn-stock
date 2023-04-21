@@ -5,7 +5,7 @@ Vue.use(Router)
 
 import Layout from "@/components/layout"
 
-const routes = [
+ const routes = [
   {
     path: '/',
     component: Layout,
@@ -128,8 +128,8 @@ const routes = [
 ]
 
 const router =  new Router({
-   routes
+    routes,
 })
 
 
-export default router
+export  {router,routes}
