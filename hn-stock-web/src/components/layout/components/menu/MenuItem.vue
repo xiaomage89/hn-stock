@@ -1,6 +1,6 @@
 <template>
   <router-link :to="path">
-    <div class="menu-item">{{ title }}</div>
+    <div class="menu-item" :class="{ 'active': active }">{{ title }}</div>
   </router-link>
 </template>
 
@@ -20,7 +20,27 @@
     data() {
       return {}
     },
-    methods: {}
+    computed: {
+      // 当前菜单是否激活
+      active() {
+        return this.$route.path === this.path
+      }
+    },
+    methods: {
+    },
+    mounted() {
+      // 如果父级存在 addChild 方法则将自己添加进去
+      if (this.$parent.hasOwnProperty('addChild')) {
+        //把自身加载到父组件中
+        this.$parent.addChild(this.path, this)
+      }
+    },
+    destroyed() {
+      // 如果父级存在 removeChild 方法则将自己从中移除
+      if (this.$parent.hasOwnProperty('removeChild')) {
+        this.$parent.removeChild(this.path)
+      }
+    }
   }
 </script>
 
@@ -31,6 +51,13 @@
     user-select: none
   }
   .menu-item:hover {
-    background: rgb(244, 244, 244);
+    background:#2c3e50;
+  }
+  a {
+    text-decoration: none;
+  }
+
+  .active {
+    color: orange;
   }
 </style>
