@@ -11,6 +11,7 @@
         v-else
         :path="item.path"
         :title="item.meta.title"
+        :icon="item.meta.icon"
         :key="item.path"
       />
     </template>
@@ -70,10 +71,12 @@
     user-select: none;
     width: 200px;
     height: 100%;
+    overflow:auto;
     position: fixed;
-    top: 0;
+    top: 50px;
     left: 0;
     box-shadow: 5px 5px 5px rgba(204, 204, 204, 0.23);
     background-color: #545c64;
+    text-align: left;
   }
 </style>

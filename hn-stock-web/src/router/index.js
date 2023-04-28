@@ -5,131 +5,97 @@ Vue.use(Router)
 
 import Layout from "@/components/layout"
 
- const routes = [
+const routes = [
   {
     path: '/',
     component: Layout,
     redirect: '/dashboard',
-    meta: { title: 'Dashboard', icon: 'dashboard' },
+    meta: {title: 'Dashboard', icon: 'el-icon-menu'},
     children: [{
       path: 'dashboard',
       name: 'Dashboard',
       component: () => import('@/pages/dashboard/index'),
-      meta: { title: 'Dashboard', icon: 'dashboard' }
+      meta: {title: 'Dashboard', icon: 'el-icon-menu'}
     }]
   },
 
   {
-    path: '/example',
+    path: '/indiv',
     component: Layout,
-    redirect: '/example/table',
-    name: 'Example',
-    meta: { title: 'Example', icon: 'el-icon-s-help' },
+    redirect: '/indiv/market',
+    name: '个股',
+    meta: {title: '个股', icon: 'el-icon-s-help'},
     children: [
       {
-        path: 'table',
-        name: 'Table',
-        component: () => import('@/pages/table/index'),
-        meta: { title: 'Table', icon: 'table' }
-      },
-      {
-        path: 'tree',
-        name: 'Tree',
-        component: () => import('@/pages/tree/index'),
-        meta: { title: 'Tree', icon: 'tree' }
-      }
-    ]
-  },
-
-  {
-    path: '/form',
-    component: Layout,
-    meta: { title: 'Form', icon: 'form' },
-    children: [
-      {
-        path: 'index',
-        name: 'Form',
-        component: () => import('@/pages/form/index'),
-        meta: { title: 'Form', icon: 'form' }
-      }
-    ]
-  },
-
-  {
-    path: '/nested',
-    component: Layout,
-    redirect: '/nested/menu1',
-    name: 'Nested',
-    meta: {
-      title: 'Nested',
-      icon: 'nested'
-    },
-    children: [
-      {
-        path: 'menu1',
-        component: () => import('@/pages/nested/menu1/index'), // Parent router-view
-        name: 'Menu1',
-        meta: { title: 'Menu1' },
+        path: 'market',
+        name: '行情',
+        component: () => import('@/pages/indiv/market'),
+        meta: {title: '行情', icon: 'el-icon-s-grid'},
         children: [
           {
-            path: 'menu1-1',
-            component: () => import('@/pages/nested/menu1/menu1-1'),
-            name: 'Menu1-1',
-            meta: { title: 'Menu1-1' }
+            path: 'center',
+            name: '行情中心',
+            component: () => import('@/pages/indiv/market/center'),
+            meta: {title: '行情中心', icon: 'el-icon-s-grid'},
           },
           {
-            path: 'menu1-2',
-            component: () => import('@/pages/nested/menu1/menu1-2'),
-            name: 'Menu1-2',
-            meta: { title: 'Menu1-2' },
-            children: [
-              {
-                path: 'menu1-2-1',
-                component: () => import('@/pages/nested/menu1/menu1-2/menu1-2-1'),
-                name: 'Menu1-2-1',
-                meta: { title: 'Menu1-2-1' }
-              },
-              {
-                path: 'menu1-2-2',
-                component: () => import('@/pages/nested/menu1/menu1-2/menu1-2-2'),
-                name: 'Menu1-2-2',
-                meta: { title: 'Menu1-2-2' }
-              }
-            ]
+            path: 'indivMsg',
+            name: '个股信息',
+            component: () => import('@/pages/indiv/market/indivMsg'),
+            meta: {title: '个股信息', icon: 'el-icon-s-grid'},
           },
           {
-            path: 'menu1-3',
-            component: () => import('@/pages/nested/menu1/menu1-3'),
-            name: 'Menu1-3',
-            meta: { title: 'Menu1-3' }
+            path: 'shareChart',
+            name: '分时图',
+            component: () => import('@/pages/indiv/market/shareChart'),
+            meta: {title: '分时图', icon: 'el-icon-share'},
+          },
+          {
+            path: 'ChartLine',
+            name: 'K线图',
+            component: () => import('@/pages/indiv/market/ChartLine'),
+            meta: {title: 'K线图', icon: 'el-icon-s-grid'},
           }
         ]
       },
       {
-        path: 'menu2',
-        component: () => import('@/pages/nested/menu2/index'),
-        name: 'Menu2',
-        meta: { title: 'menu2' }
+        path: 'analysis',
+        name: '分析',
+        component: () => import('@/pages/indiv/analysis'),
+        meta: {title: '分析', icon: 'el-icon-s-grid'},
+        children: [
+          {
+            path: 'kChart',
+            name: 'k线图',
+            component: () => import('@/pages/indiv/analysis/kChart'),
+            meta: {title: 'k线图', icon: 'el-icon-s-grid'},
+          },
+          {
+            path: 'volratio',
+            name: '量比',
+            component: () => import('@/pages/indiv/analysis/volratio'),
+            meta: {title: '量比', icon: 'el-icon-s-grid'},
+          }
+        ]
       }
     ]
   },
-
   {
     path: 'external-link',
     component: Layout,
-    meta: { title: 'External Link', icon: 'link' },
+    meta: {title: 'External Link', icon: 'link'},
     children: [
       {
         path: 'https://panjiachen.github.io/vue-element-admin-site/#/',
-        meta: { title: 'External Link', icon: 'link' }
+        meta: {title: 'External Link'}
       }
     ]
   }
 ]
 
-const router =  new Router({
-    routes,
+const router = new Router({
+  routes,
 })
 
 
-export  {router,routes}
+export {router, routes}

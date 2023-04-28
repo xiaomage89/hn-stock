@@ -1,6 +1,8 @@
 <template>
   <div>
     <div class="title" @click="handleClick" >
+
+      <i :class=item.meta.icon></i>
       <!-- 标题 -->
       <a href="javascript:void(0)" :class="{ 'active': active }">{{ item.meta.title }}</a>
       <!-- 箭头符号 -->
@@ -22,6 +24,7 @@
           v-else
           :path="resolvePath(itemX.path)"
           :title="itemX.meta.title"
+          :icon="itemX.meta.icon"
           :key="itemX.path"
         />
       </template>

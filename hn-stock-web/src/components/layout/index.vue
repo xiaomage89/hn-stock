@@ -1,23 +1,22 @@
 <template>
-  <div class="app-wrapper">
+  <el-container>
+    <el-header style="padding: 0px;height: 48px">
+      <NavBar/>
+    </el-header>
     <el-container>
-      <el-aside>
-          <Menu/>
+      <el-aside style="width: 200px">
+        <Menu/>
       </el-aside>
       <el-container>
-        <el-header>
-          <NavBar/>
-        </el-header>
-        <el-main>
+        <el-main style="padding: 0px;height: 689px;">
           <AppMain/>
         </el-main>
-        <el-footer>
-          <FooterBar/>
-        </el-footer>
+<!--        <el-footer style="padding: 0px;height: 25px;">-->
+<!--          <FooterBar/>-->
+<!--        </el-footer>-->
       </el-container>
     </el-container>
-  </div>
-
+  </el-container>
 </template>
 
 <script>
@@ -35,8 +34,4 @@
 </script>
 
 <style scoped>
-  .app-wrapper {
-    height: 100%;
-    width: 100%;
-  }
 </style>

@@ -1,6 +1,8 @@
 <template>
   <router-link :to="path">
-    <div class="menu-item" :class="{ 'active': active }">{{ title }}</div>
+    <div class="menu-item" :class="{ 'active': active }">
+      <i :class=icon></i>
+      {{ title }}</div>
   </router-link>
 </template>
 
@@ -13,6 +15,10 @@
         required: true
       },
       title: { // 标题
+        type: String,
+        required: true
+      },
+      icon: {
         type: String,
         required: true
       }

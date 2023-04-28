@@ -56,7 +56,7 @@ public class MyBatisPlusGenerator {
     private static GlobalConfig initGlobalConfig(String projectPath) {
         return new GlobalConfig.Builder()
                 .outputDir(projectPath + "/src/main/java")
-                .author("macro")
+                .author("MyBatisPlus代码生成器")
                 .disableOpenDir()
                 .enableSwagger()
                 .fileOverride()
@@ -81,14 +81,13 @@ public class MyBatisPlusGenerator {
      * 初始化包配置
      */
     private static PackageConfig initPackageConfig(String projectPath,String moduleName) {
-        //moduleName   不想要模块路径
-        moduleName="";
+
         Props props = new Props("generator.properties");
         return new PackageConfig.Builder()
                 .moduleName(moduleName)
                 .parent(props.getStr("package.base"))
                 .entity("model")
-                .pathInfo(Collections.singletonMap(OutputFile.mapperXml, projectPath + "/src/main/resources/mapper/" + moduleName))
+                .pathInfo(Collections.singletonMap(OutputFile.mapperXml, projectPath + "/src/main/resources/mapper/" + moduleName+"/temp"))
                 .build();
     }
 

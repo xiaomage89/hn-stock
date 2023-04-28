@@ -1,8 +1,8 @@
 package com.hn.market.indiv.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.hn.market.mbg.model.MkIndivDay;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.hn.market.entity.indiv.model.MkIndivDay;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -17,13 +17,22 @@ import java.util.concurrent.ExecutionException;
  */
 public interface MkIndivDayService extends IService<MkIndivDay> {
     /**
-     * 查询最新个股行情（包含沪深京A股） ，如果数据库没有数据，网盘爬取
+     * 查询最新个股行情（包含沪深京A股）
      * @param smarket
      * @param pageSize
      * @param pageNum
      * @return
      */
-    List<MkIndivDay> list(String smarket, String scode,String sname,String sdate,Integer pageSize, Integer pageNum);
+    List<MkIndivDay> list(String smarket, String scode,String sname,String sdate,String edate,Integer pageSize, Integer pageNum);
+
+    /**
+     * 爬取最新个股行情（包含沪深京A股）
+     * @param smarket
+     * @param pageSize
+     * @param pageNum
+     * @return
+     */
+    Page<MkIndivDay> create(String smarket, String scode,String sname,String sdate,Integer pageSize, Integer pageNum);
 
     /**
      * 查询上市以来所有个股行情（包含沪深京A股） ，如果数据库没有数据，网盘爬取；
@@ -33,7 +42,7 @@ public interface MkIndivDayService extends IService<MkIndivDay> {
      * @param pageNum
      * @return 涨跌幅，市场，代码 降序排列
      */
-    List<MkIndivDay>  listPast(String scode,String sname,Integer pageSize, Integer pageNum) throws ExecutionException, InterruptedException;
+    Page<MkIndivDay>  listPast(String scode,String sname,Integer pageSize, Integer pageNum) throws ExecutionException, InterruptedException;
 
     boolean delete(String scode, String sname ,String sdate);
 

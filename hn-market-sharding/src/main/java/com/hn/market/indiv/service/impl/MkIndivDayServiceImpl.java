@@ -12,8 +12,8 @@ import com.hn.market.common.utils.MyDateUtils;
 import com.hn.market.common.utils.WebCrawlerUtils;
 import com.hn.market.indiv.service.MkIndivDayService;
 import com.hn.market.indiv.thread.MkIndivDayThread;
-import com.hn.market.mbg.mapper.MkIndivDayMapper;
-import com.hn.market.mbg.model.MkIndivDay;
+import com.hn.market.entity.indiv.mapper.MkIndivDayMapper;
+import com.hn.market.entity.indiv.model.MkIndivDay;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -61,7 +62,7 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
     private FileIOUtils fileIOUtils;
 
     /**
-     * 查询最新个股行情（包含沪深京A股） ，如果数据库没有数据，网盘爬取
+     * 查询最新个股行情（包含沪深京A股）
      *
      * @param smarket
      * @param pageSize
@@ -69,7 +70,51 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
      * @return 涨跌幅，市场，代码 降序排列
      */
     @Override
-    public List<MkIndivDay> list(String smarket, String scode, String sname, String sdate, Integer pageSize, Integer pageNum) {
+    public List<MkIndivDay> list(String smarket, String scode, String sname, String sdate, String edate, Integer pageSize, Integer pageNum) {
+        //返回数据
+        Page<MkIndivDay> pageMsg = new Page<>(pageNum, pageSize);
+        QueryWrapper<MkIndivDay> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<MkIndivDay> lambda = wrapper.lambda();
+
+        if (StrUtil.isNotEmpty(sdate)) {
+            lambda.ge(MkIndivDay::getSdate, sdate);
+        } else {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+            String format = sdf.format(new Date());
+            lambda.ge(MkIndivDay::getSdate, format);
+        }
+        if (StrUtil.isNotEmpty(edate)) {
+            lambda.le(MkIndivDay::getSdate, edate);
+        }
+
+        if (StrUtil.isNotEmpty(smarket)) {
+            lambda.eq(MkIndivDay::getSmarket, smarket);
+        }
+
+        if (StrUtil.isNotEmpty(scode)) {
+            lambda.eq(MkIndivDay::getScode, scode);
+        }
+
+        if (StrUtil.isNotEmpty(sname)) {
+            lambda.like(MkIndivDay::getSname, sname);
+        }
+
+        lambda.orderByDesc(MkIndivDay::getSdate, MkIndivDay::getDifferrange, MkIndivDay::getScode);
+
+        return list(lambda);
+    }
+
+
+    /**
+     * 爬取最新个股行情（包含沪深京A股）
+     *
+     * @param smarket
+     * @param pageSize
+     * @param pageNum
+     * @return 涨跌幅，市场，代码 降序排列
+     */
+    @Override
+    public Page<MkIndivDay> create(String smarket, String scode, String sname, String sdate, Integer pageSize, Integer pageNum) {
 
         //返回数据
         Page<MkIndivDay> page = new Page<>(pageNum, pageSize);
@@ -86,7 +131,25 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
             String content = webCrawlerUtils.getCrawler(DF_MARKET_INDIV_URL);
             //解析数据
             List<MkIndivDay> list = analysis(content, ndate);
-            saveBatch(list);
+
+            HashMap<String, List<MkIndivDay>> mapList = new HashMap<>();
+            for (MkIndivDay vo:list){
+                String key=vo.getSmarket()+String.valueOf((Integer.valueOf(vo.getScode())%20));
+                if(mapList.containsKey(key)){
+                    List<MkIndivDay> vos = mapList.get(key);
+                    vos.add(vo);
+                    mapList.put(key,vos);
+                }else{
+                    List<MkIndivDay> vos = new ArrayList<MkIndivDay>();
+                    vos.add(vo);
+                    mapList.put(key,vos);
+                }
+            }
+            for(String key:mapList.keySet()){
+                List<MkIndivDay> vos = mapList.get(key);
+                saveBatch(vos);
+            }
+
         }
 
         if (StrUtil.isNotEmpty(smarket)) {
@@ -100,7 +163,7 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
         }
 
         lambda.orderByDesc(MkIndivDay::getDifferrange, MkIndivDay::getSmarket, MkIndivDay::getScode);
-        return list(lambda);
+        return page(page, lambda);
     }
 
 
@@ -114,7 +177,7 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
      * @return 代码 日期
      */
     @Override
-    public List<MkIndivDay> listPast(String scode, String sname, Integer pageSize, Integer pageNum) {
+    public Page<MkIndivDay> listPast(String scode, String sname, Integer pageSize, Integer pageNum) {
         //返回数据
         Page<MkIndivDay> page = new Page<>(pageNum, pageSize);
         //爬虫路径
@@ -139,7 +202,6 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
         //list去重
         // list.stream().filter(distinctByKey(MkIndivDay::getScode)).collect(Collectors.toList());
 
-        long start = Calendar.getInstance().getTimeInMillis();
         //查看股票数据的日期；
         Map<String, List> map = new HashMap<>();
         String newScode = "";
@@ -163,35 +225,53 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
         for (Future<Map<String, List>> future : futures) {
             try {
                 map.putAll(future.get());
+                futures.remove(future);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (ExecutionException e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("fun1==========>" + ((Calendar.getInstance().getTimeInMillis() - start) / 1000));
 
-        start = Calendar.getInstance().getTimeInMillis();
+        futures.clear();
         int i = 0;
         for (String key : map.keySet()) {
             String urlPath = url + key;
             String content = webCrawlerUtils.getCrawler(urlPath);
             // 解析Json
-            mkIndivDayThread.analysisPast(content, map.get(key));
+            Future<String> future = mkIndivDayThread.analysisPast(content, map.get(key));
+            futures.add(future);
             try {
                 i++;
-                if(i%10==0) {
+                if (i % 10 == 0) {
                     Thread.sleep(1000);
-                    System.out.println("已处理条数"+i);
+                    System.out.println("已处理条数" + i);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("fun2==========>" + ((Calendar.getInstance().getTimeInMillis() - start) / 1000));
-        lambda.clear();
-        lambda.last(" limit 5 ");
-        return list(lambda);
+
+        //判断异步调用的方法是否全都执行完了
+        while (true) {
+            int doneSize = 0;
+            for (Future<Integer> future : futures) {
+                //该异步方法是否执行完成
+                if (future.isDone()) {
+                    futures.remove(future);
+                }
+            }
+            //如果异步方法全部执行完，跳出循环
+            if (futures.isEmpty()) {
+                break;
+            }
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }//每隔2秒判断一次
+        }
+        return page(page, lambda);
     }
 
     @Override
@@ -218,7 +298,7 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
     public boolean createDetails(String scode, String sname, String ndays) {
         QueryWrapper<MkIndivDay> wrapper = new QueryWrapper<>();
         LambdaQueryWrapper<MkIndivDay> lambda = wrapper.lambda();
-        lambda.select(MkIndivDay::getSmarket,MkIndivDay::getScode);
+        lambda.select(MkIndivDay::getSmarket, MkIndivDay::getScode);
         if (StrUtil.isNotEmpty(scode)) {
             lambda.eq(MkIndivDay::getScode, scode);
         }
@@ -227,22 +307,47 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
         }
         //根据最新日期
         String ndate = myDateUtils.getWorkDate();
+        // ndate= "20230418";
         lambda.like(MkIndivDay::getSdate, ndate);
         List<MkIndivDay> list = list(lambda);
-        String url = DF_MARKET_INDIV_DETAILS_URL+ndays+DF_SCLASS_SCODE;
-        String filePath = DF_MARKET_INDIV_DETAILS_PATH+myDateUtils.getNewDate().substring(0,6);
-        for (MkIndivDay mk:list){
-            String secid = mk.getSmarket()+"."+mk.getScode();
-            String httpUrl = url +secid;
-            String content = webCrawlerUtils.getCrawler(httpUrl);
+        String url = DF_MARKET_INDIV_DETAILS_URL + ndays + DF_SCLASS_SCODE;
+        String filePath = DF_MARKET_INDIV_DETAILS_PATH + myDateUtils.getNewDate().substring(0, 6);
+        for (MkIndivDay mk : list) {
             try {
-                String  newfilepath = fileIOUtils.creatTxtFile(filePath, mk.getScode());
-                mkIndivDayThread.analysisDetails(content,newfilepath);
+                String newfilepath = fileIOUtils.creatTxtFile(filePath, mk.getScode());
+                File file = new File(newfilepath);
+                Long lastModified = file.lastModified();
+                Date date = new Date(lastModified);
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                if (sdf.format(date).equals(sdf.format(new Date()))) {
+                    continue;
+                }
+                String secid = mk.getSmarket() + "." + mk.getScode();
+                String httpUrl = url + secid;
+                String content = webCrawlerUtils.getCrawler(httpUrl);
+                mkIndivDayThread.analysisDetails(content, newfilepath);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
+
+        // File file = new File(DF_MARKET_INDIV_DETAILS_PATH + "202305");
+        // File[] files = file.listFiles();
+        // List addDates = new ArrayList<File>();
+        // for (int i = 0; i < files.length; i++) {
+        //     addDates.add(files[i]);
+        //     if(i%10==0) {
+        //         mkIndivDayThread.addDate(addDates);
+        //         try {
+        //             Thread.sleep(1000);
+        //         } catch (InterruptedException e) {
+        //             e.printStackTrace();
+        //         }
+        //         addDates = new ArrayList<File>();
+        //     }
+        // }
+        // if(addDates.size()>0) mkIndivDayThread.addDate(addDates);
+
         return true;
     }
 
@@ -298,8 +403,6 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
             mkIndivDay.setPe(stock.getBigDecimal("f9", BigDecimal.ZERO).divide(BigDecimal.valueOf(100)));
             //量比
             mkIndivDay.setVolratio(stock.getBigDecimal("f10", BigDecimal.ZERO).divide(BigDecimal.valueOf(100)));
-            //分表代码
-            mkIndivDay.setScodeNum(null == scode ? 0 : Integer.valueOf(scode));
             //代码
             mkIndivDay.setScode(scode);
             //市场
@@ -329,6 +432,4 @@ public class MkIndivDayServiceImpl extends ServiceImpl<MkIndivDayMapper, MkIndiv
         }
         return list;
     }
-
-
 }

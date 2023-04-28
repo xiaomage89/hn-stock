@@ -1,5 +1,7 @@
 <template>
-   <el-footer>Footer</el-footer>
+   <div class="header">
+     Footer
+   </div>
 </template>
 
 <script>
@@ -9,9 +11,9 @@
 </script>
 
 <style scoped>
-  .el-header {
+  .header {
     background-color: #B3C0D1;
     color: #333;
-    line-height: 60px;
+    line-height: 25px;
   }
 </style>

@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @Configuration
 @EnableTransactionManagement
-@MapperScan({"com.hn.market.mbg.mapper"})
+@MapperScan({"com.hn.market.entity.indiv.mapper"})
 public class MyBatisConfig {
 
     @Bean

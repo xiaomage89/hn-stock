@@ -101,36 +101,7 @@ public class FileIOUtils {
 		return fileValues;
 	}
 
-	//数据库连接池
-	static List<Connection> cons = new  ArrayList<Connection>();
 
-	public Connection getConnectionJDBC() {
-
-		if (cons.size()>0){
-			return cons.remove(0);
-		}
-
-
-		String url = "jdbc:mysql://localhost:3306/stock?rewriteBatchedStatements=true&characterEncoding=utf-8&useSSL=false";
-		String user = "root";
-		String password = "123456";
-		Connection conn = null;
-		for (int i=0;i<10;i++) {
-			try {
-				Class.forName("com.mysql.jdbc.Driver");
-				conn = DriverManager.getConnection(url, user, password);
-				conn.setAutoCommit(false);//关闭自动提交
-				cons.add(conn);
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return cons.remove(0);
-	}
 
 	/**
 	 * 文件重命名

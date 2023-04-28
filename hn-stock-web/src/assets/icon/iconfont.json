@@ -1,0 +1,16 @@
+{
+  "id": "4038742",
+  "name": "el-stock",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "4758146",
+      "name": "股票",
+      "font_class": "gupiao1",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 <template>
-    <el-main>
-      <router-view />
-    </el-main>
+      <div class="main">
+        <router-view />
+      </div>
 </template>
 
 <script>
@@ -11,5 +11,4 @@
 </script>
 
 <style scoped>
-
 </style>

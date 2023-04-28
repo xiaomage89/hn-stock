@@ -1,21 +1,18 @@
 package com.hn.market.indiv.thread;
 
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hn.market.mbg.mapper.MkIndivDayMapper;
-import com.hn.market.mbg.model.MkIndivDay;
+import com.hn.market.entity.indiv.mapper.MkIndivDayMapper;
+import com.hn.market.entity.indiv.model.MkIndivDay;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.FilterWriter;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -86,7 +83,6 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
                 mkIndivDay.setVolratio(stock.getBigDecimal("f10", BigDecimal.ZERO).divide(BigDecimal.valueOf(100)));
                 //分表代码
                 String scode = stock.getStr("f12", null);
-                mkIndivDay.setScodeNum(null == scode ? 0 : Integer.valueOf(scode));
                 //代码
                 mkIndivDay.setScode(scode);
                 //市场
@@ -133,18 +129,15 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
      * @param content
      */
     @Async("myAsync")
-    public void analysisPast(String content, List dates) {
+    public Future<String> analysisPast(String content, List dates) {
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        System.out.println("Stcok自带的线程池开始" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
-
-        if (content == null) return ;
+        if (content == null) return null;
 
         List list = new ArrayList<MkIndivDay>();
 
         JSONObject jsonObject = JSONUtil.parseObj(content);
         JSONObject data = jsonObject.getJSONObject("data");
-        if (null == data) return ;
+        if (null == data) return null;
         //代码
         String scode = data.getStr("code");
         //市场
@@ -179,8 +172,6 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
             mkIndivDay.setAmplitude(new BigDecimal(split[7]));
             //换手率%
             mkIndivDay.setTurn(new BigDecimal(split[10]));
-            //分表代码
-            mkIndivDay.setScodeNum(null == scode ? 0 : Integer.valueOf(scode));
             //代码
             mkIndivDay.setScode(scode);
             //市场
@@ -197,19 +188,178 @@ public class MkIndivDayThread extends ServiceImpl<MkIndivDayMapper, MkIndivDay> 
             list.add(mkIndivDay);
         }
         saveBatch(list);
-        System.out.println("Stcok自带的线程池结束" + Thread.currentThread().getName() + "-" + sdf.format(new Date()));
+        return new AsyncResult<>("本线程结束");
     }
 
 
     @Async("myAsync")
-    public void analysisDetails(String content, String filepath){
+    public void analysisDetails(String content, String filepath) {
 
         try {
-            FileWriter fw = new FileWriter(filepath,true);
-            fw.write(content+"\n");
+            //取文件最后一行的第一个日期，判读是否重复写入
+            // HashMap<String, Integer> dateMap = new HashMap<String, Integer>();
+            // String lineStr = getLastLineStr(filepath,null);
+            // JSONObject jsonObject = JSONUtil.parseObj(lineStr);
+            // JSONArray list = jsonObject.getJSONObject("data").getJSONArray("trends");
+            // if (list.size()>0) {
+            //     String date = list.getStr(0).substring(0, 10);
+            //     if (content.contains(date)) {
+            //         return;
+            //     }
+            // }
+
+            //添加开始日期和结束日期
+            String sDate="";
+            String eDate="";
+            String nDate="";
+            JSONObject jsonObject = JSONUtil.parseObj(content);
+            JSONArray list = jsonObject.getJSONObject("data").getJSONArray("trends");
+            if (list!=null&&list.size()>0) {
+                String[] datas = list.getStr(0).split("\",\"");
+                for (int i = 0; i < list.size(); i++) {
+                    String data= list.get(i).toString();
+                    String[] split = data.split(",");
+                    if (split.length == 6) {
+                        nDate = split[0].substring(0,10).replace("-", "");
+                        if(i==0){
+                            sDate = nDate;
+                            eDate = nDate;
+                        }
+                        if (nDate.compareTo(sDate) < 0) {
+                            sDate = nDate;
+                        } else if (nDate.compareTo(eDate) > 0) {
+                            eDate = nDate;
+                        } else {
+                            continue;
+                        }
+                    }
+                }
+            }
+            jsonObject.putOpt("sdate",sDate);
+            jsonObject.putOpt("edate",eDate);
+            content=jsonObject.toString();
+            FileWriter fw = new FileWriter(filepath, true);
+            fw.write(content + "\n");
             fw.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 获取文本文件最后一行中的字符串。 * @param file * 目标文件 * @param charset * 字符编码 * @return 文本文件中最后一行中的字符串。
+     */
+    public  String getLastLineStr(String filepath, String charset) {
+        String lastLine = null;
+        RandomAccessFile raf = null;
+        try {
+            File file = new File(filepath);
+            raf = new RandomAccessFile(file, "rwd");
+            //获取最后一行的起始位置，并移动指针到指定位置。
+            long lastLinePos = getLastLinePos(raf);
+            //获取文件的大小：也就是占用的字节数
+            long length = raf.length();
+            byte[] bytes = new byte[(int) ((length - 1) - lastLinePos)];
+            //上面的getLastLinePos(raf);方法已经移动文件指针到最后一行的起始位置了，所以这里只需要读取即可。
+            raf.read(bytes);
+            if (charset == null) {
+                lastLine = (new String(bytes));
+            } else {
+                lastLine = (new String(bytes, charset));
+            }
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return lastLine;
+    }
+
+    /**
+     * 返回最后一行的起始位置,并移动文件指针到最后一行的起始位置。 * @param raf RandomAccessFile对象 * @return 最后一行的起始位置 * @throws IOException
+     */
+    private long getLastLinePos(RandomAccessFile raf) throws IOException {
+        long lastLinePos = 0L;
+        // 获取文件占用字节数
+        long len = raf.length();
+        if (len > 0L) {
+            // 向前走一个字节
+            long pos = len - 1;
+            while (pos > 0) {
+                pos--;
+                // 移动指针
+                raf.seek(pos);
+                // 判断这个字节是不是回车符
+                if (raf.readByte() == '\n') {
+                    // lastLinePos = pos;// 记录下位置
+                    // break;// 前移到会第一个回车符后结束
+                    return pos;
+                }
+            }
+        }
+        return lastLinePos;
+    }
+
+    /*
+        分时图数据 补充开始时间和结束时间
+     */
+    @Async("myAsync")
+    public void addDate(List<File> files){
+        for(File file : files){
+            try {
+                String path = file.getPath();
+                String newPath = path.replaceAll(".txt","")+"_a.txt";
+                new File(newPath).createNewFile();
+                FileWriter fw = new FileWriter(newPath, true);
+
+                BufferedReader reader = new BufferedReader(new FileReader(file));
+                String content=null;
+                while((content=reader.readLine())!=null){
+                    //添加开始日期和结束日期
+                    String sDate="";
+                    String eDate="";
+                    String nDate="";
+                    System.out.println(content);
+                    JSONObject jsonObject = JSONUtil.parseObj(content);
+                    JSONArray list = jsonObject.getJSONObject("data").getJSONArray("trends");
+                    if (list!=null&&list.size()>0) {
+                        String[] datas = list.getStr(0).split("\",\"");
+                        for (int i = 0; i < list.size(); i++) {
+                            String data= list.get(i).toString();
+                            String[] split = data.split(",");
+                            if (split.length == 6) {
+                                nDate = split[0].substring(0,10).replace("-", "");
+                                if(i==0){
+                                    sDate = nDate;
+                                    eDate = nDate;
+                                }
+                                if (nDate.compareTo(sDate) < 0) {
+                                    sDate = nDate;
+                                } else if (nDate.compareTo(eDate) > 0) {
+                                    eDate = nDate;
+                                } else {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    jsonObject.putOpt("sdate",sDate);
+                    jsonObject.putOpt("edate",eDate);
+                    content=jsonObject.toString();
+
+                    fw.write(content + "\n");
+                }
+                reader.close();
+                fw.close();
+                file.delete();
+                new File(newPath).renameTo(new File(path));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
